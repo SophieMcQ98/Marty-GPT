@@ -1,3 +1,4 @@
 .env
 marty_cleaned.json
 MartyMessages.txt
+chunks.jsonl

@@ -39,4 +39,4 @@ with open(CHUNKS_FILE, "r", encoding="utf-8") as f:
 db.add_documents(docs)
 db.persist()
 
-print(f"✅ {len(docs)} chunks embedded and stored in ChromaDB.")
+print(f"{len(docs)} chunks embedded and stored in ChromaDB.")

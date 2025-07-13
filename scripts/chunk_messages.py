@@ -6,7 +6,7 @@ import re
 # === CONFIG ===
 INPUT_FILE = "../data/marty_cleaned.json"
 OUTPUT_FILE = "../data/chunks.jsonl"
-TIME_GAP_MINUTES = 30
+TIME_GAP_MINUTES = 60
 
 def clean_text(text):
     text = text.encode("utf-8").decode("unicode_escape", errors="ignore")
@@ -43,14 +43,14 @@ def chunk_messages(messages):
             continue  # skip empty or stripped messages
 
         if last_time and (ts - last_time).total_seconds() > TIME_GAP_MINUTES * 60:
-            if current_chunk:
+            if(len(current_chunk)>1 or len(current_chunk[0].split(" "))>10) or current_chunk[0].startswith("Marty:"):
                 chunks.append({
                     "chunk_id": chunk_id,
                     "timestamp": chunk_start_time.isoformat(),
                     "text": "\n".join(current_chunk)
                 })
                 chunk_id += 1
-                current_chunk = []
+            current_chunk = []
 
         if not current_chunk:
             chunk_start_time = ts
@@ -78,5 +78,5 @@ if __name__ == "__main__":
     messages = load_messages(INPUT_FILE)
     chunks = chunk_messages(messages)
     write_chunks(chunks, OUTPUT_FILE)
-    print(f"✅ Chunked {len(messages)} messages into {len(chunks)} chunks.")
-    print(f"📄 Output saved to: {OUTPUT_FILE}")
+    print(f"Chunked {len(messages)} messages into {len(chunks)} chunks.")
+    print(f"Output saved to: {OUTPUT_FILE}")

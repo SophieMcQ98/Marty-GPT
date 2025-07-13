@@ -2,8 +2,8 @@ import json
 import re
 from datetime import datetime
 
-INPUT_FILE = "MartyMessages.txt"
-OUTPUT_FILE = "marty_cleaned.json"
+INPUT_FILE = "../data/MartyMessages.txt"
+OUTPUT_FILE = "../data/marty_cleaned.json"
 
 # Normalize smart punctuation into plain ASCII
 def normalize_text(text):
@@ -53,7 +53,7 @@ def parse_messages(filepath):
                     continue
 
             elif is_sender_line(line):
-                current_message["sender"] = "Me" if line == "Me" else "Marty"
+                current_message["sender"] = "Sophie" if line == "Me" else "Marty"
 
             else:
                 cleaned_line = normalize_text(line)
@@ -76,4 +76,4 @@ def save_as_json(data, outpath):
 if __name__ == "__main__":
     messages = parse_messages(INPUT_FILE)
     save_as_json(messages, OUTPUT_FILE)
-    print(f"✅ Parsed {len(messages)} messages into '{OUTPUT_FILE}'")
+    print(f"Parsed {len(messages)} messages into '{OUTPUT_FILE}'")
