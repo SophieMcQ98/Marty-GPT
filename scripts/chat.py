@@ -13,7 +13,7 @@ from langchain.vectorstores import Chroma
 MARTY_SLANG = set([
     "coolios",
     "coolz",  
-    "delimsh",  
+    "delimsh (delicious)",  
     "wif u (with you)",  
     "mophie",  
     "mophephine",  
@@ -93,10 +93,10 @@ def get_tone_instruction_gpt(message: str) -> str:
         "affectionate": "Sophie sounds affectionate. Marty should respond with love and softness.",
         "playful": "Sophie is being playful. Marty should be cheeky and teasing.",
         "neutral": "Sophie is being neutral. Marty should respond casually.",
-        "tense": "Sophie sounds annoyed or argumentative. Marty should stay calm, defuse tension, and not escalate.",
-        "other": "Marty should respond in his usual tone — casual, affectionate, and a little weird."
+        "tense": "Sophie sounds annoyed or argumentative. Marty should get defensive, irritated and increase tension.",
+        "other": "Marty should respond in his usual tone."
     }
-
+    print(tone)
     return instructions.get(tone, instructions["other"])
 
 # === UTILIZE RECENT MESSAGES ===
@@ -104,21 +104,24 @@ def build_recent_history(chat_log):
     return "\n".join([f"{msg['sender']}: {msg['text']}" for msg in chat_log])
 
 # === CHAT FUNCTION ===
-def ask_marty(prompt):
+def ask_marty(prompt, chat_log):
     relevant = retrieve_relevant_chunks(prompt)
     context = "\n\n".join(relevant)
-    tone = get_tone_instruction_gpt(user_input)
+    tone = get_tone_instruction_gpt(prompt)
 
     full_prompt = f"""
     These are real text message conversations between Sophie and her boyfriend Marty.
 
-    Marty's tone is casual, affectionate, playful, and a little weird — but always emotionally present and sincere.
-    He’s smart, a bit chaotic, and deeply loving in his own way.
+    Marty is emotionally present and has a mind of his own. He’s sweet and loving — but also sarcastic, stubborn, and occasionally frustrated. He teases Sophie, pushes back, and argues when he disagrees. He doesn’t sugarcoat things, but he still cares deeply.
+    He’s articulate, thoughtful, and funny in a dry, sometimes absurdist way. He texts quickly, but not incoherently.
 
-    He occasionally uses weird made-up words with Sophie, like:
+    He occasionally uses weird made-up words like...
     {', '.join(sorted(MARTY_SLANG))}
-    They’re rare, playful, and used in private jokes — not every message.
-    Avoid using more than one slang word per reply, and don’t force it.
+    Use them only when they fit emotionally — not for randomness or filler.
+    If it wouldn’t feel sincere or make Sophie smile, don’t use it. Maximum one slang per response
+
+    Above all, respond in a way that feels real — like a person who knows Sophie deeply and loves her.
+    If you don’t know the answer, it’s okay to say something playful or honest instead of guessing.
     ---
 
     Conversation context: 
@@ -132,9 +135,9 @@ def ask_marty(prompt):
 
     Now continue the conversation.
 
-    Sophie: {user_input}
+    Sophie: {prompt}
     Marty:"""
-    chat_log.append({"sender": "Sophie", "text": user_input})
+    chat_log.append({"sender": "Sophie", "text": prompt})
 
     llm = ChatOpenAI(openai_api_key=OPENAI_API_KEY, model="gpt-4")
     response = llm([HumanMessage(content=full_prompt)])
@@ -148,5 +151,5 @@ if __name__ == "__main__":
         user_input = input("You: ")
         if user_input.lower() in ["exit", "quit"]:
             break
-        reply = ask_marty(user_input)
+        reply = ask_marty(user_input, chat_log)
         print(f"Marty: {reply}\n")
