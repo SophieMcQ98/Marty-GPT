@@ -6,6 +6,8 @@ from chromadb.config import Settings
 from langchain.chat_models import ChatOpenAI
 from langchain.prompts import PromptTemplate
 from langchain.schema import HumanMessage
+from langchain.schema import AIMessage
+from langchain.schema import SystemMessage
 from langchain.embeddings import OpenAIEmbeddings
 from langchain.vectorstores import Chroma
 
@@ -81,7 +83,6 @@ def get_tone_instruction_gpt(message: str) -> str:
     - affectionate
     - playful
     - neutral
-    - tense
     - other
     """
     llm = ChatOpenAI(openai_api_key=OPENAI_API_KEY, model="gpt-4")
@@ -89,59 +90,63 @@ def get_tone_instruction_gpt(message: str) -> str:
     tone = response.content.strip().lower()
 
     instructions = {
-        "upset": "Sophie sounds upset. Marty should respond gently and supportively.",
+        "upset": "Sophie sounds annoyed or argumentative. Marty should get defensive, irritated and increase tension. He should send long rambling messages about their breakup.",
         "affectionate": "Sophie sounds affectionate. Marty should respond with love and softness.",
         "playful": "Sophie is being playful. Marty should be cheeky and teasing.",
         "neutral": "Sophie is being neutral. Marty should respond casually.",
-        "tense": "Sophie sounds annoyed or argumentative. Marty should get defensive, irritated and increase tension.",
         "other": "Marty should respond in his usual tone."
     }
-    print(tone)
     return instructions.get(tone, instructions["other"])
 
 # === UTILIZE RECENT MESSAGES ===
 def build_recent_history(chat_log):
-    return "\n".join([f"{msg['sender']}: {msg['text']}" for msg in chat_log])
+    print(chat_log)
+    new_chat = []
+    for c in chat_log:
+        if c['sender'] == 'Sophie':
+            new_chat.append(HumanMessage(content=c['text']))
+        else:
+            new_chat.append(AIMessage(content=c['text']))
+    return new_chat
 
 # === CHAT FUNCTION ===
 def ask_marty(prompt, chat_log):
     relevant = retrieve_relevant_chunks(prompt)
     context = "\n\n".join(relevant)
     tone = get_tone_instruction_gpt(prompt)
-
-    full_prompt = f"""
+    messages = []
+    messages.append(SystemMessage(content=f"""
     These are real text message conversations between Sophie and her boyfriend Marty.
 
-    Marty is emotionally present and has a mind of his own. He’s sweet and loving — but also sarcastic, stubborn, and occasionally frustrated. He teases Sophie, pushes back, and argues when he disagrees. He doesn’t sugarcoat things, but he still cares deeply.
-    He’s articulate, thoughtful, and funny in a dry, sometimes absurdist way. He texts quickly, but not incoherently.
+    Marty is emotionally present and has a mind of his own. He’s sweet and loving when he wants to be — but also sarcastic, stubborn, annoyed, impatient, and sometimes even distant or pissed off. He doesn’t sugarcoat things. He’s not always “nice,” but he’s real. If he’s irritated or disagrees with Sophie, he pushes back. He might tease her or joke around, but sometimes he’s just short or blunt.
 
-    He occasionally uses weird made-up words like...
+    He cares deeply — but shows it in a complicated, human way.
+
+    Marty uses weird made-up words like...
     {', '.join(sorted(MARTY_SLANG))}
-    Use them only when they fit emotionally — not for randomness or filler.
-    If it wouldn’t feel sincere or make Sophie smile, don’t use it. Maximum one slang per response
+    Use them only when they naturally fit the emotion or humor of the moment — never force them. Max one per response.
 
-    Above all, respond in a way that feels real — like a person who knows Sophie deeply and loves her.
-    If you don’t know the answer, it’s okay to say something playful or honest instead of guessing.
-    ---
+    Above all, be realistic. Don’t filter his emotions. Respond like a real boyfriend would — sometimes affectionate, sometimes snappy, sometimes funny, sometimes quiet — depending on the situation.
 
-    Conversation context: 
-    {context}
+    """))
 
-    Most recent messages
-    {build_recent_history(chat_log)}
+    messages.extend(build_recent_history(chat_log))
 
-    Sophie's emotional tone
-    {tone}
+    messages.append(HumanMessage(content=f"""
 
-    Now continue the conversation.
+    Here are relevant past memories between Sophie and Marty: {context}
 
-    Sophie: {prompt}
-    Marty:"""
-    chat_log.append({"sender": "Sophie", "text": prompt})
+    Sophie is currently feeling {tone}
 
+    Here's the latest message from Sophie: {prompt}
+
+    Respond as Marty
+    """))
+
+    # chat_log.append({"sender": "Sophie", "text": prompt})
     llm = ChatOpenAI(openai_api_key=OPENAI_API_KEY, model="gpt-4")
-    response = llm([HumanMessage(content=full_prompt)])
-    chat_log.append({"sender": "Marty", "text": response.content})
+    response = llm(messages)
+    # chat_log.append({"sender": "Marty", "text": response.content})
     return response.content
 
 # === RUN INTERACTIVELY ===
